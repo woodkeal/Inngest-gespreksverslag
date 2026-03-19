@@ -25,7 +25,12 @@ export const sendWhatsApp = createTool({
     });
     await (step?.run("send-whatsapp", doSend) ?? doSend());
 
-    state.messageSent = true;
+    // Error path: markeer error melding als verzonden; success path: markeer pipeline als klaar
+    if (state.failedStep) {
+      state.errorMessageSent = true;
+    } else {
+      state.messageSent = true;
+    }
     return `Bericht verzonden naar ${input.to}`;
   },
 });

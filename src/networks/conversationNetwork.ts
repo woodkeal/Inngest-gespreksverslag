@@ -6,6 +6,7 @@ import {
   htmlConverterAgent,
   emailAgent,
   messengerAgent,
+  errorHandlerAgent,
 } from "../agents/index.js";
 import type { ConversationStateData } from "../types/state.js";
 
@@ -25,6 +26,14 @@ export function createInitialState(overrides: Partial<ConversationStateData> = {
     awaitingFollowUp: false,
     followUpQuestion: null,
     messageCount: 0,
+    // Error handling
+    failedStep: null,
+    failureReason: null,
+    retryCount: {},
+    shouldRetry: null,
+    errorHandled: false,
+    errorUserMessage: null,
+    errorMessageSent: false,
     ...overrides,
   });
 }
@@ -39,10 +48,41 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
     htmlConverterAgent,
     emailAgent,
     messengerAgent,
+    errorHandlerAgent,
   ],
-  maxIter: 20,
+  maxIter: 30,
   defaultRouter: ({ network }) => {
     const state = network.state.data;
+
+    // --- Foutafhandeling (hoogste prioriteit) ---
+
+    // Stap mislukt, nog niet verwerkt → error handler
+    if (state.failedStep && !state.errorHandled) return errorHandlerAgent;
+
+    // Error verwerkt, gebruiker nog niet geïnformeerd → messenger
+    if (state.failedStep && state.errorHandled && !state.errorMessageSent) return messengerAgent;
+
+    // Gebruiker geïnformeerd → retry of stoppen
+    if (state.failedStep && state.errorHandled && state.errorMessageSent) {
+      if (state.shouldRetry) {
+        // Bewaar de te herstarten stap vóór we state clearen
+        const stepToRetry = state.failedStep;
+        // Reset error state zodat de normale pipeline hervat
+        state.failedStep = null;
+        state.failureReason = null;
+        state.errorHandled = false;
+        state.shouldRetry = null;
+        state.errorUserMessage = null;
+        state.errorMessageSent = false;
+        // Route terug naar de mislukte stap
+        if (stepToRetry === "transcription") return transcriptionAgent;
+        if (stepToRetry === "email") return emailAgent;
+      }
+      // shouldRetry = false: gebruiker is geïnformeerd, we stoppen
+      return undefined;
+    }
+
+    // --- Normale pipeline ---
 
     // Stap 1: Classificeer altijd eerst
     if (!state.intent) return classifierAgent;

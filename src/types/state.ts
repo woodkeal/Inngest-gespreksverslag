@@ -39,4 +39,12 @@ export interface ConversationStateData {
   awaitingFollowUp: boolean;
   followUpQuestion: string | null;
   messageCount: number;
+  // Error handling
+  failedStep: string | null;
+  failureReason: string | null;
+  retryCount: Record<string, number>;
+  shouldRetry: boolean | null;
+  errorHandled: boolean;
+  errorUserMessage: string | null;
+  errorMessageSent: boolean;
 }

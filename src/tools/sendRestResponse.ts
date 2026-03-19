@@ -26,7 +26,12 @@ export const sendRestResponse = createTool({
       await (step?.run("send-rest-response", doCallback) ?? doCallback());
     }
 
-    state.messageSent = true;
+    // Error path: markeer error melding als verzonden; success path: markeer pipeline als klaar
+    if (state.failedStep) {
+      state.errorMessageSent = true;
+    } else {
+      state.messageSent = true;
+    }
     return `Antwoord verzonden naar ${input.replyCallbackUrl}`;
   },
 });

@@ -41,11 +41,21 @@ export const transcribeAudio = createTool({
       return result.text?.trim() || "(geen spraak gedetecteerd)";
     };
 
-    logger.info("Transcriptie starten", { conversationId: state.conversationId, audioUrl: input.audioUrl });
-    const transcript = await (step?.run("transcribe-audio", doTranscribe) ?? doTranscribe());
-    logger.info("Transcriptie voltooid", { conversationId: state.conversationId, transcriptLength: transcript.length, preview: transcript.slice(0, 80) });
-    state.transcript = transcript;
+    const attempt = state.retryCount["transcription"] ?? 0;
+    const stepId = attempt === 0 ? "transcribe-audio" : `transcribe-audio-retry-${attempt}`;
 
-    return transcript;
+    logger.info("Transcriptie starten", { conversationId: state.conversationId, audioUrl: input.audioUrl, attempt });
+    try {
+      const transcript = await (step?.run(stepId, doTranscribe) ?? doTranscribe());
+      logger.info("Transcriptie voltooid", { conversationId: state.conversationId, transcriptLength: transcript.length, preview: transcript.slice(0, 80) });
+      state.transcript = transcript;
+      return transcript;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      logger.error("Transcriptie mislukt", { conversationId: state.conversationId, attempt, reason });
+      state.failedStep = "transcription";
+      state.failureReason = reason;
+      return `Transcriptie mislukt: ${reason}`;
+    }
   },
 });

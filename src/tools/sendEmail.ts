@@ -15,13 +15,23 @@ export const sendEmailTool = createTool({
     const state = network.state.data as ConversationStateData;
     const html = state.htmlOutput ?? "<p>Geen rapport beschikbaar</p>";
 
-    logger.info("E-mail versturen", { conversationId: state.conversationId, to: input.to, subject: input.subject, htmlLength: html.length });
-    const doSend = async () => sendEmail({ to: input.to, subject: input.subject, html });
-    await (step?.run("send-email", doSend) ?? doSend());
-    logger.info("E-mail verstuurd", { conversationId: state.conversationId, to: input.to });
+    const attempt = state.retryCount["email"] ?? 0;
+    const stepId = attempt === 0 ? "send-email" : `send-email-retry-${attempt}`;
 
-    state.emailSent = true;
-    state.userEmail = input.to;
-    return `E-mail verstuurd naar ${input.to}`;
+    logger.info("E-mail versturen", { conversationId: state.conversationId, to: input.to, subject: input.subject, htmlLength: html.length, attempt });
+    const doSend = async () => sendEmail({ to: input.to, subject: input.subject, html });
+    try {
+      await (step?.run(stepId, doSend) ?? doSend());
+      logger.info("E-mail verstuurd", { conversationId: state.conversationId, to: input.to });
+      state.emailSent = true;
+      state.userEmail = input.to;
+      return `E-mail verstuurd naar ${input.to}`;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      logger.error("E-mail versturen mislukt", { conversationId: state.conversationId, to: input.to, attempt, reason });
+      state.failedStep = "email";
+      state.failureReason = reason;
+      return `E-mail versturen mislukt: ${reason}`;
+    }
   },
 });
