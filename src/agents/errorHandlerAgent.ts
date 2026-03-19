@@ -15,9 +15,19 @@ const handleErrorTool = createTool({
     const state = network.state.data as ConversationStateData;
     const step = state.failedStep!;
     const currentRetries = state.retryCount[step] ?? 0;
+    const reason = (state.failureReason ?? "").toLowerCase();
 
-    // Override retry decision if max retries exceeded
-    const shouldRetry = input.shouldRetry && currentRetries < MAX_RETRIES;
+    // Deterministisch: bekende niet-retriable fouten nooit opnieuw proberen
+    const isKnownNonRetriable =
+      reason.includes("forbidden") ||
+      reason.includes("unauthorized") ||
+      reason.includes("401") ||
+      reason.includes("403") ||
+      reason.includes("invalid api key") ||
+      reason.includes("api key");
+
+    // Override retry decision if max retries exceeded or error is non-retriable
+    const shouldRetry = !isKnownNonRetriable && input.shouldRetry && currentRetries < MAX_RETRIES;
 
     state.shouldRetry = shouldRetry;
     state.errorUserMessage = input.userMessage;

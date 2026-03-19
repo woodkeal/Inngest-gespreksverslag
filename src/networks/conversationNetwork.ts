@@ -92,6 +92,13 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
 
     // Stap 2: Audio transcriptie pipeline
     if (state.intent === "transcribe_audio") {
+      // Bewaker: geen audiobestand aanwezig → informeer gebruiker en stop
+      if (!state.mediaUrl && state.messageSent) return undefined;
+      if (!state.mediaUrl && !state.messageSent) {
+        state.errorUserMessage = "Om een gespreksverslag te maken, heb ik een audiobestand nodig. Stuur het audiobestand mee als bijlage.";
+        return messengerAgent;
+      }
+
       if (!state.transcript)                            return transcriptionAgent;
       if (state.transcript && !state.report)            return reportAgent;
       if (state.report && !state.htmlOutput)            return htmlConverterAgent;
