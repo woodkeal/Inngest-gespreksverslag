@@ -43,4 +43,5 @@ export type InngestEvents = {
   "message/whatsapp.send":     { data: WhatsAppSendEvent };
   "message/rest.send":         { data: RestSendEvent };
   "conversation/cancel":       { data: ConversationCancelEvent };
+  "conversation/hitl.reply":   { data: WhatsAppReceivedEvent };
 };

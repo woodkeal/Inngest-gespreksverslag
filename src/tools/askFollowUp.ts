@@ -2,6 +2,7 @@ import { createTool } from "@inngest/agent-kit";
 import { z } from "zod";
 import twilio from "twilio";
 import type { ConversationStateData } from "../types/state.js";
+import { startHitl, endHitl } from "../lib/hitlRegistry.js";
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -31,6 +32,10 @@ export const askFollowUp = createTool({
     // Beide step IDs zijn stabiel (geen dynamische waarden) zodat Inngest replay
     // de WhatsApp-send en het waitForEvent correct memoïseert en niet opnieuw uitvoert.
     if (channel === "whatsapp") {
+      // Registreer HITL-sessie zodat de webhook de reply naar het juiste event routed.
+      // Wordt bij elke replay opnieuw aangeroepen (idempotent).
+      startHitl(conversationId);
+
       await step?.run("send-follow-up-question", () =>
         twilioClient.messages.create({
           from: process.env.TWILIO_WHATSAPP_NUMBER!,
@@ -39,12 +44,17 @@ export const askFollowUp = createTool({
         })
       );
 
-      // Pauzeer de pipeline totdat de gebruiker antwoordt (max 30 minuten)
+      // Pauzeer de pipeline totdat de gebruiker antwoordt (max 30 minuten).
+      // Gebruikt een ander event dan message/whatsapp.received zodat de reply
+      // geen nieuwe pipeline start.
       const reply = await step?.waitForEvent("wait-for-follow-up-reply", {
-        event: "message/whatsapp.received",
+        event: "conversation/hitl.reply",
         timeout: "30m",
         if: `async.data.conversationId == "${conversationId}"`,
       });
+
+      // Altijd opruimen, ongeacht of er een antwoord of timeout was
+      endHitl(conversationId);
 
       if (!reply) {
         return "TIMEOUT: Geen antwoord ontvangen binnen 30 minuten.";

@@ -2,6 +2,7 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import twilio from "twilio";
 import { inngest } from "../client.js";
 import { logger } from "../lib/logger.js";
+import { isHitlActive } from "../lib/hitlRegistry.js";
 
 /** Parse application/x-www-form-urlencoded body from a raw IncomingMessage */
 async function parseFormBody(req: IncomingMessage): Promise<Record<string, string>> {
@@ -77,8 +78,14 @@ export async function handleTwilioWebhook(
 
   logger.info("Twilio webhook ontvangen", { from, sid, hasMedia: !!mediaUrl });
 
+  // Route HITL replies naar een apart event zodat de bestaande pipeline
+  // wordt hervat maar geen nieuwe pipeline wordt gestart.
+  const eventName = isHitlActive(from)
+    ? "conversation/hitl.reply"
+    : "message/whatsapp.received";
+
   await inngest.send({
-    name: "message/whatsapp.received",
+    name: eventName,
     data: {
       from,
       to,
