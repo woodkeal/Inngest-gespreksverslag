@@ -1,6 +1,7 @@
 import { createTool } from "@inngest/agent-kit";
 import { z } from "zod";
 import OpenAI from "openai";
+import { logger } from "../lib/logger.js";
 import type { ConversationStateData } from "../types/state.js";
 
 // Lazy client — initialized on first use so .env changes are picked up after restart
@@ -40,7 +41,9 @@ export const transcribeAudio = createTool({
       return result.text?.trim() || "(geen spraak gedetecteerd)";
     };
 
+    logger.info("Transcriptie starten", { conversationId: state.conversationId, audioUrl: input.audioUrl });
     const transcript = await (step?.run("transcribe-audio", doTranscribe) ?? doTranscribe());
+    logger.info("Transcriptie voltooid", { conversationId: state.conversationId, transcriptLength: transcript.length, preview: transcript.slice(0, 80) });
     state.transcript = transcript;
 
     return transcript;

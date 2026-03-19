@@ -28,10 +28,8 @@ Het antwoord van de gebruiker is hun e-mailadres. Gebruik dat vervolgens om de e
 Gebruik de tool send_email met:
 - to: "${userEmail}"
 - subject: "Jouw gespreksverslag"
-- html: (de HTML output van het rapport)
 
-HTML RAPPORT:
-${htmlOutput.slice(0, 2000)}${htmlOutput.length > 2000 ? "... (ingekort)" : ""}`;
+De HTML inhoud wordt automatisch uit de state geladen — je hoeft geen html-veld mee te geven.`;
   },
   tools: [askFollowUp, sendEmailTool],
 });

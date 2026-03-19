@@ -34,7 +34,10 @@ export const handleRestMessage = inngest.createFunction(
     logger.info("REST pipeline voltooid", {
       conversationId: event.data.sessionId,
       intent: result.state.data.intent,
+      emailSent: result.state.data.emailSent,
+      emailTo: result.state.data.userEmail,
       messageSent: result.state.data.messageSent,
+      transcript: result.state.data.transcript ? `${result.state.data.transcript.slice(0, 80)}…` : null,
     });
 
     return {
