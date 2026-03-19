@@ -11,14 +11,11 @@ export const sendEmailTool = createTool({
     subject: z.string().describe("Onderwerp van de e-mail"),
     html: z.string().describe("HTML inhoud van de e-mail"),
   }),
-  handler: async (input, { network }) => {
+  handler: async (input, { network, step }) => {
     const state = network.state.data as ConversationStateData;
 
-    await sendEmail({
-      to: input.to,
-      subject: input.subject,
-      html: input.html,
-    });
+    const doSend = async () => sendEmail({ to: input.to, subject: input.subject, html: input.html });
+    await (step?.run("send-email", doSend) ?? doSend());
 
     state.emailSent = true;
     state.userEmail = input.to;

@@ -17,26 +17,30 @@ export const transcribeAudio = createTool({
   parameters: z.object({
     audioUrl: z.string().describe("De URL van het audiobestand om te transcriberen"),
   }),
-  handler: async (input, { network }) => {
+  handler: async (input, { network, step }) => {
     const state = network.state.data as ConversationStateData;
 
-    const response = await fetch(input.audioUrl);
-    if (!response.ok) {
-      throw new Error(`Kon audio niet downloaden: ${response.status} ${response.statusText}`);
-    }
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const ext = input.audioUrl.split("?")[0].split(".").pop()?.toLowerCase() ?? "ogg";
-    const mimeMap: Record<string, string> = { wav: "audio/wav", mp3: "audio/mpeg", ogg: "audio/ogg", m4a: "audio/mp4", webm: "audio/webm" };
-    const mime = mimeMap[ext] ?? "audio/ogg";
-    const file = new File([buffer], `audio.${ext}`, { type: mime });
+    const doTranscribe = async () => {
+      const response = await fetch(input.audioUrl);
+      if (!response.ok) {
+        throw new Error(`Kon audio niet downloaden: ${response.status} ${response.statusText}`);
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const ext = input.audioUrl.split("?")[0].split(".").pop()?.toLowerCase() ?? "ogg";
+      const mimeMap: Record<string, string> = { wav: "audio/wav", mp3: "audio/mpeg", ogg: "audio/ogg", m4a: "audio/mp4", webm: "audio/webm" };
+      const mime = mimeMap[ext] ?? "audio/ogg";
+      const file = new File([buffer], `audio.${ext}`, { type: mime });
 
-    const result = await getGroqClient().audio.transcriptions.create({
-      model: "whisper-large-v3-turbo",
-      file,
-      language: "nl",
-    });
+      const result = await getGroqClient().audio.transcriptions.create({
+        model: "whisper-large-v3-turbo",
+        file,
+        language: "nl",
+      });
 
-    const transcript = result.text?.trim() || "(geen spraak gedetecteerd)";
+      return result.text?.trim() || "(geen spraak gedetecteerd)";
+    };
+
+    const transcript = await (step?.run("transcribe-audio", doTranscribe) ?? doTranscribe());
     state.transcript = transcript;
 
     return transcript;

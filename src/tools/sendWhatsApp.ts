@@ -15,14 +15,15 @@ export const sendWhatsApp = createTool({
     to: z.string().describe("Ontvanger in E.164 formaat, bijv. whatsapp:+31612345678"),
     body: z.string().describe("De inhoud van het bericht (max 1600 tekens)"),
   }),
-  handler: async (input, { network }) => {
+  handler: async (input, { network, step }) => {
     const state = network.state.data as ConversationStateData;
 
-    await twilioClient.messages.create({
+    const doSend = async () => twilioClient.messages.create({
       from: process.env.TWILIO_WHATSAPP_NUMBER!,
       to: input.to,
-      body: input.body.slice(0, 1600), // WhatsApp tekenlimiet
+      body: input.body.slice(0, 1600),
     });
+    await (step?.run("send-whatsapp", doSend) ?? doSend());
 
     state.messageSent = true;
     return `Bericht verzonden naar ${input.to}`;
