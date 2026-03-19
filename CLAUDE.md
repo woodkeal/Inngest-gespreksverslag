@@ -71,6 +71,49 @@ credentials.json, token.json  # Google OAuth (gitignored)
 - https://agentkit.inngest.com/overview   # Documentation of inngest agent kit with lots of examples
 - https://www.inngest.com/docs            # Documentation of inngest 
 
+## Dependency Management
+
+Always use the latest stable version of every package. Before adding or updating a dependency, read `DEPENDENCY-MANAGEMENT.md` for the full policy.
+
+**Short rules:**
+- Pin to the latest stable version (`^x.y.z` where x.y.z is current latest)
+- Prefer packages already in `package.json` over adding new ones
+- Before adding anything new: check maintenance status, license, security history, and whether it's still the right tool in 2026
+- Remove unused packages promptly — dead weight causes version conflicts and bloat
+
+Full checklist and decision criteria: [`DEPENDENCY-MANAGEMENT.md`](./DEPENDENCY-MANAGEMENT.md)
+
+## Repo / Git Etiquette
+
+### Branch Strategy
+- **Never commit directly to main** unless the user asks for small changes
+- Use feature branches for all work
+- Descriptive branch names: `feature/transcript-selector`, `fix/gemini-timeout`
+
+### Commit Practices
+- Commit frequently as you work
+- Write clear, descriptive commit messages
+- Keep commits focused on single changes
+
+### Issue Tracking
+- Create GitHub issues for all planned features
+- Reference issues in commit messages when applicable
+- Use issues to track bugs and enhancements
+
+### Worktrees
+- Native Claude Code worktrees live in `.claude/worktrees/` (used by `EnterWorktree`)
+- Legacy feature worktrees may exist in `.trees/` (gitignored)
+- When a branch is in a worktree, work directly in the worktree path instead of `git checkout`
+
+## Workflow Best Practices
+
+From experience with this repository:
+- Keep CLAUDE.md under 200 lines per file for reliable adherence
+- Perform manual `/compact` at ~50% context usage
+- Start with plan mode for complex tasks
+- Use human-gated task list workflow for multi-step tasks
+- Break subtasks small enough to complete in under 50% context
+
 ## Bottom Line
 
 You sit between what I want (workflows) and what actually gets done (tools). Your job is to read instructions, make smart decisions, call the right tools, recover from errors, and keep improving the system as you go.
