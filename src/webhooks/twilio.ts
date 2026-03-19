@@ -2,12 +2,20 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import twilio from "twilio";
 import { inngest } from "../client.js";
 import { logger } from "../lib/logger.js";
+import { isHitlActive } from "../lib/hitlRegistry.js";
 
 /** Parse application/x-www-form-urlencoded body from a raw IncomingMessage */
 async function parseFormBody(req: IncomingMessage): Promise<Record<string, string>> {
   return new Promise((resolve, reject) => {
     let body = "";
-    req.on("data", (chunk) => (body += chunk.toString()));
+    const MAX_BODY = 64 * 1024; // 64 KB — Twilio webhooks are always small
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY) {
+        reject(new Error("Payload Too Large"));
+        req.destroy();
+      }
+    });
     req.on("end", () => {
       const params: Record<string, string> = {};
       for (const pair of body.split("&")) {
@@ -46,6 +54,13 @@ export async function handleTwilioWebhook(
     }
   }
 
+  // Ignore status callbacks (delivery receipts for outbound messages)
+  if (params["MessageStatus"]) {
+    res.writeHead(200, { "Content-Type": "text/xml" });
+    res.end("<Response></Response>");
+    return;
+  }
+
   const from    = params["From"]             ?? "";
   const to      = params["To"]               ?? "";
   const body    = params["Body"]             ?? "";
@@ -53,10 +68,24 @@ export async function handleTwilioWebhook(
   const mediaUrl = params["MediaUrl0"];
   const mediaContentType = params["MediaContentType0"];
 
+  // Ignore echoes: messages sent by the bot itself
+  const ownNumber = process.env.TWILIO_WHATSAPP_NUMBER ?? "";
+  if (from === ownNumber || from === ownNumber.replace("whatsapp:", "")) {
+    res.writeHead(200, { "Content-Type": "text/xml" });
+    res.end("<Response></Response>");
+    return;
+  }
+
   logger.info("Twilio webhook ontvangen", { from, sid, hasMedia: !!mediaUrl });
 
+  // Route HITL replies naar een apart event zodat de bestaande pipeline
+  // wordt hervat maar geen nieuwe pipeline wordt gestart.
+  const eventName = isHitlActive(from)
+    ? "conversation/hitl.reply"
+    : "message/whatsapp.received";
+
   await inngest.send({
-    name: "message/whatsapp.received",
+    name: eventName,
     data: {
       from,
       to,

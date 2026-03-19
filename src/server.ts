@@ -42,8 +42,17 @@ agentServer.on("request", async (req: IncomingMessage, res: ServerResponse) => {
   // REST message endpoint
   if (url === "/api/messages" && method === "POST") {
     let body = "";
-    req.on("data", (chunk) => (body += chunk.toString()));
+    const MAX_BODY = 1024 * 1024; // 1 MB
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY) {
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Payload Too Large" }));
+        req.destroy();
+      }
+    });
     req.on("end", async () => {
+      if (res.writableEnded) return;
       try {
         const payload = JSON.parse(body) as {
           sessionId: string;
@@ -70,6 +79,40 @@ agentServer.on("request", async (req: IncomingMessage, res: ServerResponse) => {
         res.end(JSON.stringify({ accepted: true }));
       } catch (err) {
         logger.error("REST message fout", { error: String(err) });
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: String(err) }));
+      }
+    });
+    return;
+  }
+
+  // Cancel a running conversation pipeline
+  const cancelMatch = url.match(/^\/api\/conversations\/([^/]+)\/cancel$/);
+  if (cancelMatch && method === "POST") {
+    const conversationId = decodeURIComponent(cancelMatch[1]);
+    let body = "";
+    const MAX_BODY_CANCEL = 64 * 1024; // 64 KB (only needs a reason string)
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY_CANCEL) {
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Payload Too Large" }));
+        req.destroy();
+      }
+    });
+    req.on("end", async () => {
+      if (res.writableEnded) return;
+      try {
+        const payload = body ? (JSON.parse(body) as { reason?: string }) : {};
+        await inngest.send({
+          name: "conversation/cancel",
+          data: { conversationId, reason: payload.reason },
+        });
+        logger.info("Annuleer-event verstuurd", { conversationId });
+        res.writeHead(202, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ cancelled: true, conversationId }));
+      } catch (err) {
+        logger.error("Annuleer-fout", { error: String(err) });
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: String(err) }));
       }

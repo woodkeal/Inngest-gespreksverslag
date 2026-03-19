@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "dev:inngest": "npx --ignore-scripts=false inngest-cli@latest dev -u http://localhost:3000/api/inngest",
+    "kill": "npx kill-port 3000",
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit"

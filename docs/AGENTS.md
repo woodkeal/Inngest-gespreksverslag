@@ -10,6 +10,7 @@
 | `html_converter` | claude-haiku-4-5-20251001 | Rapport JSON → semantische HTML | `htmlOutput` |
 | `email` | claude-haiku-4-5-20251001 | E-mailadres opvragen + rapport versturen | `emailSent`, `userEmail` |
 | `messenger` | claude-haiku-4-5-20251001 | WhatsApp bevestiging / chat antwoord | `messageSent` |
+| `error_handler` | claude-haiku-4-5-20251001 | Retry-beslissing + gebruikersboodschap bij fout | `shouldRetry`, `errorHandled`, `errorUserMessage` |
 
 ---
 
@@ -21,7 +22,6 @@
 
 **Herkende intents**:
 - `transcribe_audio` — audiobestand aanwezig of gebruiker vraagt om transcriptie
-- `schedule` — afspraken plannen (pre-wired, workflow volgt)
 - `chat` — algemeen gesprek / vragen
 - `unknown` — onduidelijk of buiten scope
 
@@ -108,3 +108,27 @@
 **Kanaal-bewust**: Kiest automatisch `send_whatsapp` (WhatsApp) of `send_rest_response` (REST) op basis van `state.data.channel`.
 
 **Tools**: `send_whatsapp`, `send_rest_response`
+
+---
+
+## errorHandlerAgent
+
+**Doel**: Beslist na een mislukte stap of er een retry plaatsvindt of de pipeline stopt. Stelt ook een Nederlandstalige gebruikersboodschap op.
+
+**Model**: `claude-haiku-4-5-20251001`
+
+**Tools**: Geen — puur redeneren op basis van state.
+
+**Inputs vanuit state**: `failedStep`, `failureReason`, `retryCount`
+
+**Outputs naar state**: `shouldRetry` (bool), `errorHandled` (true), `errorUserMessage` (string)
+
+**Logica**:
+- Niet-retrybare fouten (401, 403, auth failures) → `shouldRetry = false`
+- Max 2 retries per stap (`retryCount[failedStep] >= 2`) → `shouldRetry = false`
+- Overige fouten → `shouldRetry = true` (retryCount wordt verhoogd)
+
+**Routering na uitvoering** (in de network router):
+1. `errorHandled = true`, `errorMessageSent = false` → messengerAgent verstuurt de foutmelding
+2. `errorMessageSent = true`, `shouldRetry = true` → router reset error state en herstart de mislukte stap
+3. `errorMessageSent = true`, `shouldRetry = false` → pipeline stopt

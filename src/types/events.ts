@@ -31,17 +31,9 @@ export interface RestSendEvent {
   replyCallbackUrl: string;
 }
 
-export interface ReportEmailSentEvent {
+export interface ConversationCancelEvent {
   conversationId: string;
-  toEmail: string;
-  subject: string;
-}
-
-export interface SystemErrorEvent {
-  conversationId?: string;
-  error: string;
-  stack?: string;
-  source: string;
+  reason?: string;
 }
 
 // Discriminated union for inngest.send() calls
@@ -50,6 +42,6 @@ export type InngestEvents = {
   "message/rest.received":     { data: RestReceivedEvent };
   "message/whatsapp.send":     { data: WhatsAppSendEvent };
   "message/rest.send":         { data: RestSendEvent };
-  "report/email.sent":         { data: ReportEmailSentEvent };
-  "system/error.unhandled":    { data: SystemErrorEvent };
+  "conversation/cancel":       { data: ConversationCancelEvent };
+  "conversation/hitl.reply":   { data: WhatsAppReceivedEvent };
 };
