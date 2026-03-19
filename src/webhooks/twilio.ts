@@ -7,7 +7,14 @@ import { logger } from "../lib/logger.js";
 async function parseFormBody(req: IncomingMessage): Promise<Record<string, string>> {
   return new Promise((resolve, reject) => {
     let body = "";
-    req.on("data", (chunk) => (body += chunk.toString()));
+    const MAX_BODY = 64 * 1024; // 64 KB — Twilio webhooks are always small
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY) {
+        reject(new Error("Payload Too Large"));
+        req.destroy();
+      }
+    });
     req.on("end", () => {
       const params: Record<string, string> = {};
       for (const pair of body.split("&")) {

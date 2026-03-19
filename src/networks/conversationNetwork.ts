@@ -25,7 +25,6 @@ export function createInitialState(overrides: Partial<ConversationStateData> = {
     messageSent: false,
     awaitingFollowUp: false,
     followUpQuestion: null,
-    messageCount: 0,
     // Error handling
     failedStep: null,
     failureReason: null,
@@ -76,6 +75,8 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
         state.errorMessageSent = false;
         // Route terug naar de mislukte stap
         if (stepToRetry === "transcription") return transcriptionAgent;
+        if (stepToRetry === "report") return reportAgent;
+        if (stepToRetry === "html") return htmlConverterAgent;
         if (stepToRetry === "email") return emailAgent;
       }
       // shouldRetry = false: gebruiker is geïnformeerd, we stoppen
@@ -109,10 +110,7 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
     // Stap 3: Chat pipeline (geen audio)
     if (state.intent === "chat" && !state.messageSent) return messengerAgent;
 
-    // Stap 4: Planning intent — placeholder voor de volgende workflow
-    // if (state.intent === "schedule") return schedulingAgent;
-
-    // Stap 5: Onbekende intent
+    // Stap 4: Onbekende intent
     if (state.intent === "unknown" && !state.messageSent) return messengerAgent;
 
     return undefined; // klaar

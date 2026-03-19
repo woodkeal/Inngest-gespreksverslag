@@ -44,9 +44,23 @@ export const transcribeAudio = createTool({
         throw new Error(`Kon audio niet downloaden: ${response.status} ${response.statusText}`);
       }
       const buffer = Buffer.from(await response.arrayBuffer());
-      const ext = audioUrl.split("?")[0].split(".").pop()?.toLowerCase() ?? "ogg";
-      const mimeMap: Record<string, string> = { wav: "audio/wav", mp3: "audio/mpeg", ogg: "audio/ogg", m4a: "audio/mp4", webm: "audio/webm" };
-      const mime = mimeMap[ext] ?? "audio/ogg";
+
+      // Bepaal extensie: probeer URL eerst, val terug op Content-Type header
+      const urlExt = audioUrl.split("?")[0].split("/").pop()?.split(".").pop()?.toLowerCase() ?? "";
+      const mimeMap: Record<string, string> = {
+        wav: "audio/wav", mp3: "audio/mpeg", mp4: "audio/mp4",
+        ogg: "audio/ogg", m4a: "audio/mp4", webm: "audio/webm",
+        flac: "audio/flac", opus: "audio/opus", mpeg: "audio/mpeg", mpga: "audio/mpeg",
+      };
+      const mimeToExt: Record<string, string> = {
+        "audio/wav": "wav", "audio/mpeg": "mp3", "audio/mp4": "m4a",
+        "audio/ogg": "ogg", "audio/webm": "webm", "audio/flac": "flac", "audio/opus": "ogg",
+      };
+
+      const contentType = response.headers.get("content-type")?.split(";")[0].trim() ?? "";
+      const mime = mimeMap[urlExt] ?? (contentType || "audio/ogg");
+      const ext = mimeMap[urlExt] ? urlExt : (mimeToExt[mime] ?? "ogg");
+
       const file = new File([buffer], `audio.${ext}`, { type: mime });
 
       const result = await getGroqClient().audio.transcriptions.create({

@@ -27,7 +27,9 @@ export const askFollowUp = createTool({
     const conversationId = state.conversationId;
     const channel = state.channel;
 
-    // Stuur de vraag via WhatsApp en wacht op het antwoord via step.waitForEvent
+    // Stuur de vraag via WhatsApp en wacht op het antwoord via step.waitForEvent.
+    // Beide step IDs zijn stabiel (geen dynamische waarden) zodat Inngest replay
+    // de WhatsApp-send en het waitForEvent correct memoïseert en niet opnieuw uitvoert.
     if (channel === "whatsapp") {
       await step?.run("send-follow-up-question", () =>
         twilioClient.messages.create({

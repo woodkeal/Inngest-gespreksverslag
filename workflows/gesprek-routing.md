@@ -12,11 +12,6 @@ Triggercondities (één van):
 - `mediaContentType` bevat "audio"
 - De berichttekst bevat woorden als "transcribeer", "verslag", "opname", "audio"
 
-### schedule
-Triggercondities (één van):
-- De berichttekst bevat woorden als "afspraak", "inplannen", "agenda", "vergadering plannen"
-- Gebruiker vraagt om een datum/tijd te reserveren
-
 ### chat
 Triggercondities:
 - Geen audio, geen planning-intent
@@ -32,9 +27,6 @@ Triggercondities:
 ```
 intent = transcribe_audio
   └─► transcriptionAgent → reportAgent → htmlConverterAgent → emailAgent → messengerAgent
-
-intent = schedule (pre-wired, workflow volgt)
-  └─► schedulingAgent (nog niet geïmplementeerd)
 
 intent = chat
   └─► messengerAgent (direct antwoord)

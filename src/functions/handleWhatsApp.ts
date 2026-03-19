@@ -19,7 +19,7 @@ export const handleWhatsApp = inngest.createFunction(
   },
   async ({ event, step }: { event: { data: WhatsAppReceivedEvent }; step: any }) => {
     logger.info("WhatsApp bericht ontvangen", {
-      conversationId: event.data.conversationId,
+      from: event.data.from,
       messageSid: event.data.messageSid,
       hasMedia: !!event.data.mediaUrl,
     });
@@ -40,7 +40,6 @@ export const handleWhatsApp = inngest.createFunction(
       conversationId: event.data.from,
       channel: "whatsapp",
       mediaUrl: event.data.mediaUrl ?? null,
-      messageCount: 1,
     });
 
     const messageBody = event.data.body || (event.data.mediaUrl ? "[Audiobestand ontvangen]" : "[Leeg bericht]");

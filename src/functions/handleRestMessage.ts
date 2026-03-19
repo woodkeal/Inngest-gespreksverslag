@@ -39,7 +39,6 @@ export const handleRestMessage = inngest.createFunction(
       mediaUrl: event.data.mediaUrl ?? null,
       userEmail: event.data.userEmail ?? null,
       replyCallbackUrl: event.data.replyCallbackUrl ?? null,
-      messageCount: 1,
     });
 
     const result = await conversationNetwork.run(event.data.content, { state });

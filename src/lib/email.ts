@@ -11,12 +11,15 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
   // Set API key lazily so missing keys don't crash at startup
   sgMail.setApiKey(process.env.SENDGRID_API_KEY ?? "");
 
+  const fromEmail = process.env.EMAIL_FROM;
+  if (!fromEmail) throw new Error("EMAIL_FROM env var is required but not set");
+
   try {
     await sgMail.send({
       to: payload.to,
       from: {
-        email: process.env.EMAIL_FROM ?? "noreply@example.com",
-        name: process.env.EMAIL_FROM_NAME ?? "Gespreksverslag Bot",
+        email: fromEmail,
+        name: process.env.EMAIL_FROM_NAME ?? "Gespreksverslag",
       },
       subject: payload.subject,
       html: payload.html,

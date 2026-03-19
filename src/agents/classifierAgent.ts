@@ -8,7 +8,7 @@ const setIntent = createTool({
   description: "Sla de gedetecteerde intent op",
   parameters: z.object({
     intent: z
-      .enum(["transcribe_audio", "schedule", "chat", "unknown"])
+      .enum(["transcribe_audio", "chat", "unknown"])
       .describe("De gedetecteerde intent van het bericht"),
   }),
   handler: async (input, { network }) => {
@@ -30,7 +30,6 @@ export const classifierAgent = createAgent<ConversationStateData>({
 Analyseer het inkomende bericht en bepaal de intent:
 
 - **transcribe_audio**: De gebruiker heeft een audiobestand gestuurd of vraagt om transcriptie van audio. Kijk of er een mediaUrl aanwezig is of de gebruiker over audio spreekt.
-- **schedule**: De gebruiker wil een afspraak plannen, agenda beheren of iets inplannen.
 - **chat**: De gebruiker wil gewoon chatten, een vraag stellen of informatie opvragen.
 - **unknown**: De intent is onduidelijk of buiten scope.
 

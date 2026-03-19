@@ -16,7 +16,8 @@ You're working inside the **WAT framework** (Workflows, Agents, Tools). This arc
 - Example: If you need to pull data from a website, don't attempt it directly. Read `workflows/scrape_website.md`, figure out the required inputs, then execute `tools/scrape_single_site.py`
 
 **Layer 3: Tools (The Execution)**
-- Python scripts in `tools/` that do the actual work
+- Scripts in `tools/` (TypeScript, run via `npx tsx`) for dev/debug tasks
+- Agent-kit tool definitions live in `src/tools/` — these are the tools agents call
 - API calls, data transformations, file operations, database queries
 - Credentials and API keys are stored in `.env`
 - These scripts are consistent, testable, and fast
@@ -57,11 +58,11 @@ This loop is how the framework improves over time.
 
 **Directory layout:**
 ```
-.tmp/           # Temporary files (scraped data, intermediate exports). Regenerated as needed.
-tools/          # Python scripts for deterministic execution
+.tmp/           # Temporary files (logs, debug reports). Regenerated as needed.
+tools/          # TypeScript dev/debug scripts (run via npx tsx)
+src/tools/      # Agent-kit tool definitions (called by agents during pipeline execution)
 workflows/      # Markdown SOPs defining what to do and how
 .env            # API keys and environment variables (NEVER store secrets anywhere else)
-credentials.json, token.json  # Google OAuth (gitignored)
 ```
 
 **Core principle:** Local files are just for processing. Anything I need to see or use lives in cloud services. Everything in `.tmp/` is disposable.
