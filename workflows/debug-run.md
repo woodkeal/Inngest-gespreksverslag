@@ -111,11 +111,13 @@ Na succesvolle fix:
 - **Inngest gedrag**: Automatische retry — run zal uiteindelijk slagen
 - **Preventie**: Voeg `retries: 3` toe aan functies; gebruik Inngest rate limiting (`throttle`) om burst te voorkomen
 
-### E-mail niet ontvangen
-- **Symptoom**: `emailSent: true` in logs maar mail niet aangekomen
-- **Oorzaak 1**: SendGrid unverified sender domain → spam of geweigerd
-- **Oorzaak 2**: `SENDGRID_API_KEY` niet ingesteld → SendGrid gooit stille fout
-- **Fix**: Verifieer sender domain in SendGrid dashboard; check `.env` voor API key
+### E-mail niet ontvangen / emailSent: false
+- **Symptoom**: `emailSent: false` in pipeline voltooid log; `Inngest step error` + `ResponseError: Forbidden` (code 403) in server.log
+- **Oorzaak 1**: SendGrid unverified sender — `EMAIL_FROM` adres is niet geverifieerd in SendGrid account
+- **Oorzaak 2**: `SENDGRID_API_KEY` niet ingesteld → SendGrid geeft 403
+- **Fix**: Ga naar SendGrid → Settings → Sender Authentication → Verify a Single Sender → voeg `EMAIL_FROM` adres toe. Of stel Domain Authentication in voor het domein.
+- **Diagnose**: Kijk in server.log voor `Inngest step error` gevolgd door `ResponseError: Forbidden code: 403`. De errors array in de body bevat de specifieke boodschap (nu gelogd dankzij verbeterde foutafhandeling in `src/lib/email.ts`).
+- **Let op**: `emailSent: true` in logs maar mail niet aangekomen → mogelijk spam/quarantaine; `emailSent: false` → SendGrid API fout vóór verzending
 
 ### Duplicate step ID "email" waarschuwing
 - **Symptoom**: `Duplicate step ID "email" detected across parallel chains`

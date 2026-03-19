@@ -8,7 +8,7 @@ export const messengerAgent = createAgent<ConversationStateData>({
   description: "Verstuurt WhatsApp berichten of REST responses",
   model: anthropic({
     model: "claude-haiku-4-5-20251001",
-    defaultParameters: { max_tokens: 512 },
+    defaultParameters: { max_tokens: 512, tool_choice: { type: "any" } },
   }),
   system: ({ network }) => {
     const state = network?.state.data as ConversationStateData | undefined;

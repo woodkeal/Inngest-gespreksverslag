@@ -46,12 +46,27 @@ export async function handleTwilioWebhook(
     }
   }
 
+  // Ignore status callbacks (delivery receipts for outbound messages)
+  if (params["MessageStatus"]) {
+    res.writeHead(200, { "Content-Type": "text/xml" });
+    res.end("<Response></Response>");
+    return;
+  }
+
   const from    = params["From"]             ?? "";
   const to      = params["To"]               ?? "";
   const body    = params["Body"]             ?? "";
   const sid     = params["MessageSid"]       ?? "";
   const mediaUrl = params["MediaUrl0"];
   const mediaContentType = params["MediaContentType0"];
+
+  // Ignore echoes: messages sent by the bot itself
+  const ownNumber = process.env.TWILIO_WHATSAPP_NUMBER ?? "";
+  if (from === ownNumber || from === ownNumber.replace("whatsapp:", "")) {
+    res.writeHead(200, { "Content-Type": "text/xml" });
+    res.end("<Response></Response>");
+    return;
+  }
 
   logger.info("Twilio webhook ontvangen", { from, sid, hasMedia: !!mediaUrl });
 

@@ -47,6 +47,9 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
     // Stap 1: Classificeer altijd eerst
     if (!state.intent) return classifierAgent;
 
+    // Stop als we wachten op een antwoord van de gebruiker (HITL)
+    if (state.awaitingFollowUp) return undefined;
+
     // Stap 2: Audio transcriptie pipeline
     if (state.intent === "transcribe_audio") {
       if (!state.transcript)                            return transcriptionAgent;

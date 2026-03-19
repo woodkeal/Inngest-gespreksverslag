@@ -69,7 +69,9 @@ credentials.json, token.json  # Google OAuth (gitignored)
 ## Docs
 
 - https://agentkit.inngest.com/overview   # Documentation of inngest agent kit with lots of examples
-- https://www.inngest.com/docs            # Documentation of inngest 
+- https://www.inngest.com/docs            # Documentation of inngest
+
+**Before making any Inngest or agent-kit code change**, follow [`workflows/inngest-agentkit-code-changes.md`](./workflows/inngest-agentkit-code-changes.md). It lists which GitHub examples to check first, explains the step execution model, and documents known patterns from this codebase.
 
 ## Dependency Management
 
