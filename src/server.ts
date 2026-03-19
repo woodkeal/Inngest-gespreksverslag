@@ -1,4 +1,8 @@
 import "dotenv/config";
+import { setGlobalDispatcher, EnvHttpProxyAgent } from "undici";
+// Route Node.js fetch through the sandbox proxy, respecting no_proxy for localhost
+setGlobalDispatcher(new EnvHttpProxyAgent());
+
 import { createServer } from "@inngest/agent-kit/server";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { inngest } from "./client.js";

@@ -25,6 +25,7 @@ export const handleRestMessage = inngest.createFunction(
       mediaUrl: event.data.mediaUrl ?? null,
       userEmail: event.data.userEmail ?? null,
       replyCallbackUrl: event.data.replyCallbackUrl ?? null,
+      transcript: event.data.transcript ?? null,
       messageCount: 1,
     });
 

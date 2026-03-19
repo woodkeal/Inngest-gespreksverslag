@@ -17,6 +17,7 @@ export interface RestReceivedEvent {
   mediaUrl?: string;
   mediaContentType?: string;
   userEmail?: string;
+  transcript?: string; // pre-set transcript to skip audio transcription
 }
 
 export interface WhatsAppSendEvent {
