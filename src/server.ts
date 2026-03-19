@@ -3,7 +3,7 @@ import { createServer } from "@inngest/agent-kit/server";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { inngest } from "./client.js";
 import { conversationNetwork } from "./networks/index.js";
-import { handleWhatsApp, handleRestMessage } from "./functions/index.js";
+import { handleWhatsApp, handleRestMessage, handleTest } from "./functions/index.js";
 import { handleTwilioWebhook } from "./webhooks/twilio.js";
 import { logger } from "./lib/logger.js";
 
@@ -12,7 +12,7 @@ const agentServer = createServer({
   appId: "gespreksverslag",
   client: inngest,
   networks: [conversationNetwork],
-  functions: [handleWhatsApp, handleRestMessage],
+  functions: [handleWhatsApp, handleRestMessage, handleTest],
 });
 
 // Intercept requests before Inngest handles them so we can add our own routes
