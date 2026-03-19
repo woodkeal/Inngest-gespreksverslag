@@ -71,6 +71,18 @@ credentials.json, token.json  # Google OAuth (gitignored)
 - https://agentkit.inngest.com/overview   # Documentation of inngest agent kit with lots of examples
 - https://www.inngest.com/docs            # Documentation of inngest 
 
+## Dependency Management
+
+Always use the latest stable version of every package. Before adding or updating a dependency, read `DEPENDENCY-MANAGEMENT.md` for the full policy.
+
+**Short rules:**
+- Pin to the latest stable version (`^x.y.z` where x.y.z is current latest)
+- Prefer packages already in `package.json` over adding new ones
+- Before adding anything new: check maintenance status, license, security history, and whether it's still the right tool in 2026
+- Remove unused packages promptly — dead weight causes version conflicts and bloat
+
+Full checklist and decision criteria: [`DEPENDENCY-MANAGEMENT.md`](./DEPENDENCY-MANAGEMENT.md)
+
 ## Bottom Line
 
 You sit between what I want (workflows) and what actually gets done (tools). Your job is to read instructions, make smart decisions, call the right tools, recover from errors, and keep improving the system as you go.
