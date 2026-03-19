@@ -2,6 +2,9 @@ import { inngest } from "../client.js";
 import { conversationNetwork, createInitialState } from "../networks/index.js";
 import { logger } from "../lib/logger.js";
 import type { WhatsAppReceivedEvent } from "../types/events.js";
+import twilio from "twilio";
+
+const ACK_MESSAGE = "We hebben je audiobestand ontvangen en zijn je gespreksverslag aan het genereren. Dit kan een momentje duren ⏳";
 
 export const handleWhatsApp = inngest.createFunction(
   {
@@ -14,12 +17,24 @@ export const handleWhatsApp = inngest.createFunction(
     cancelOn: [{ event: "conversation/cancel", match: "data.conversationId" }],
     retries: 2,
   },
-  async ({ event }: { event: { data: WhatsAppReceivedEvent } }) => {
+  async ({ event, step }: { event: { data: WhatsAppReceivedEvent }; step: any }) => {
     logger.info("WhatsApp bericht ontvangen", {
       conversationId: event.data.conversationId,
       messageSid: event.data.messageSid,
       hasMedia: !!event.data.mediaUrl,
     });
+
+    // Stuur direct een bevestiging voor lange flows (audio aanwezig)
+    if (event.data.mediaUrl) {
+      await step.run("send-ack", async () => {
+        const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        await client.messages.create({
+          from: process.env.TWILIO_WHATSAPP_NUMBER!,
+          to: event.data.from,
+          body: ACK_MESSAGE,
+        });
+      });
+    }
 
     const state = createInitialState({
       conversationId: event.data.from,
@@ -28,7 +43,8 @@ export const handleWhatsApp = inngest.createFunction(
       messageCount: 1,
     });
 
-    const result = await conversationNetwork.run(event.data.body, { state });
+    const messageBody = event.data.body || (event.data.mediaUrl ? "[Audiobestand ontvangen]" : "[Leeg bericht]");
+    const result = await conversationNetwork.run(messageBody, { state });
 
     logger.info("WhatsApp pipeline voltooid", {
       conversationId: event.data.conversationId,
