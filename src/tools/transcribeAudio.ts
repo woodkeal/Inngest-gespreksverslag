@@ -31,7 +31,15 @@ export const transcribeAudio = createTool({
     }
 
     const doTranscribe = async () => {
-      const response = await fetch(audioUrl);
+      // Twilio media URLs vereisen Basic Auth (account SID + auth token)
+      const headers: Record<string, string> = {};
+      if (audioUrl.includes("api.twilio.com")) {
+        const sid = process.env.TWILIO_ACCOUNT_SID ?? "";
+        const token = process.env.TWILIO_AUTH_TOKEN ?? "";
+        headers["Authorization"] = `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`;
+      }
+
+      const response = await fetch(audioUrl, { headers });
       if (!response.ok) {
         throw new Error(`Kon audio niet downloaden: ${response.status} ${response.statusText}`);
       }
