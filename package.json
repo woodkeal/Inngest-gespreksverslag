@@ -1,0 +1,27 @@
+{
+  "name": "gespreksverslag",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:inngest": "npx --ignore-scripts=false inngest-cli@latest dev -u http://localhost:3000/api/inngest",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@inngest/agent-kit": "^0.13.2",
+    "@sendgrid/mail": "^8.1.6",
+    "dotenv": "^17.3.1",
+    "inngest": "^4.0.1",
+    "openai": "^4.104.0",
+    "twilio": "^5.13.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.4.0"
+  }
+}

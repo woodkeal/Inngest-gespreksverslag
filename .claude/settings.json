@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "inngest-skills@inngest-agent-skills": true
+  },
+  "enabledMcpjsonServers": ["inngest-dev"]
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.tmp/
+*.log
+credentials.json
+token.json
+.mcp.json
