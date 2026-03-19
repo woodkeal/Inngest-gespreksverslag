@@ -21,13 +21,22 @@ export const transcribeAudio = createTool({
   handler: async (input, { network, step }) => {
     const state = network.state.data as ConversationStateData;
 
+    // Gebruik state.mediaUrl als authoritative bron; input.audioUrl als fallback
+    const audioUrl = state.mediaUrl ?? input.audioUrl;
+    if (!audioUrl) {
+      state.failedStep = "transcription";
+      state.failureReason = "Geen audiobestand URL beschikbaar — stuur het audiobestand mee als bijlage.";
+      logger.error("Transcriptie afgebroken: geen audioUrl", { conversationId: state.conversationId });
+      return "Transcriptie afgebroken: geen audiobestand URL.";
+    }
+
     const doTranscribe = async () => {
-      const response = await fetch(input.audioUrl);
+      const response = await fetch(audioUrl);
       if (!response.ok) {
         throw new Error(`Kon audio niet downloaden: ${response.status} ${response.statusText}`);
       }
       const buffer = Buffer.from(await response.arrayBuffer());
-      const ext = input.audioUrl.split("?")[0].split(".").pop()?.toLowerCase() ?? "ogg";
+      const ext = audioUrl.split("?")[0].split(".").pop()?.toLowerCase() ?? "ogg";
       const mimeMap: Record<string, string> = { wav: "audio/wav", mp3: "audio/mpeg", ogg: "audio/ogg", m4a: "audio/mp4", webm: "audio/webm" };
       const mime = mimeMap[ext] ?? "audio/ogg";
       const file = new File([buffer], `audio.${ext}`, { type: mime });
@@ -44,7 +53,7 @@ export const transcribeAudio = createTool({
     const attempt = state.retryCount["transcription"] ?? 0;
     const stepId = attempt === 0 ? "transcribe-audio" : `transcribe-audio-retry-${attempt}`;
 
-    logger.info("Transcriptie starten", { conversationId: state.conversationId, audioUrl: input.audioUrl, attempt });
+    logger.info("Transcriptie starten", { conversationId: state.conversationId, audioUrl, attempt });
     try {
       const transcript = await (step?.run(stepId, doTranscribe) ?? doTranscribe());
       logger.info("Transcriptie voltooid", { conversationId: state.conversationId, transcriptLength: transcript.length, preview: transcript.slice(0, 80) });
