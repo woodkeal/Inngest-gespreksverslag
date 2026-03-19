@@ -11,6 +11,7 @@ export const handleWhatsApp = inngest.createFunction(
       key: "event.data.conversationId",
       limit: 1, // één pipeline per gebruiker tegelijk
     },
+    cancelOn: [{ event: "conversation/cancel", match: "data.conversationId" }],
     retries: 2,
   },
   async ({ event }: { event: { data: WhatsAppReceivedEvent } }) => {

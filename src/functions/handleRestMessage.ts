@@ -11,6 +11,7 @@ export const handleRestMessage = inngest.createFunction(
       key: "event.data.sessionId",
       limit: 1,
     },
+    cancelOn: [{ event: "conversation/cancel", if: "event.data.sessionId == async.data.conversationId" }],
     retries: 2,
   },
   async ({ event }: { event: { data: RestReceivedEvent } }) => {

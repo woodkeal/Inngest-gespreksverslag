@@ -44,6 +44,11 @@ export interface SystemErrorEvent {
   source: string;
 }
 
+export interface ConversationCancelEvent {
+  conversationId: string;
+  reason?: string;
+}
+
 // Discriminated union for inngest.send() calls
 export type InngestEvents = {
   "message/whatsapp.received": { data: WhatsAppReceivedEvent };
@@ -52,4 +57,5 @@ export type InngestEvents = {
   "message/rest.send":         { data: RestSendEvent };
   "report/email.sent":         { data: ReportEmailSentEvent };
   "system/error.unhandled":    { data: SystemErrorEvent };
+  "conversation/cancel":       { data: ConversationCancelEvent };
 };

@@ -77,6 +77,31 @@ agentServer.on("request", async (req: IncomingMessage, res: ServerResponse) => {
     return;
   }
 
+  // Cancel a running conversation pipeline
+  const cancelMatch = url.match(/^\/api\/conversations\/([^/]+)\/cancel$/);
+  if (cancelMatch && method === "POST") {
+    const conversationId = decodeURIComponent(cancelMatch[1]);
+    let body = "";
+    req.on("data", (chunk) => (body += chunk.toString()));
+    req.on("end", async () => {
+      try {
+        const payload = body ? (JSON.parse(body) as { reason?: string }) : {};
+        await inngest.send({
+          name: "conversation/cancel",
+          data: { conversationId, reason: payload.reason },
+        });
+        logger.info("Annuleer-event verstuurd", { conversationId });
+        res.writeHead(202, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ cancelled: true, conversationId }));
+      } catch (err) {
+        logger.error("Annuleer-fout", { error: String(err) });
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: String(err) }));
+      }
+    });
+    return;
+  }
+
   // Health check
   if (url === "/health" && method === "GET") {
     res.writeHead(200, { "Content-Type": "application/json" });
