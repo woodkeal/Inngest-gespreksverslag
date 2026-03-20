@@ -29,6 +29,7 @@ export const sendWhatsApp = createTool({
     if (state.failedStep) {
       state.errorMessageSent = true;
     } else {
+      state.lastReply = input.body.slice(0, 1600);
       state.messageSent = true;
     }
     return `Bericht verzonden naar ${input.to}`;

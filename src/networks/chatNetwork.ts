@@ -17,6 +17,8 @@ export function createChatState(overrides: Partial<ConversationStateData> = {}) 
     messageSent: false,
     awaitingFollowUp: false,
     followUpQuestion: null,
+    memory: null,
+    lastReply: null,
     failedStep: null,
     failureReason: null,
     retryCount: {},

@@ -38,6 +38,9 @@ export interface ConversationStateData {
   messageSent: boolean;
   awaitingFollowUp: boolean;
   followUpQuestion: string | null;
+  // Memory
+  memory: import("./memory.js").ConversationMemory | null;
+  lastReply: string | null;
   // Error handling
   failedStep: string | null;
   failureReason: string | null;

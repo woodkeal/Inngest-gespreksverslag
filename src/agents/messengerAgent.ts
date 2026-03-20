@@ -48,7 +48,31 @@ Gebruik send_rest_response met URL: ${replyCallbackUrl}`;
     }
 
     if (channel === "whatsapp") {
-      return `Je bent een WhatsApp messenger. ${contextMessage}
+      // Inject persistent memory for chat intent
+      let memoryContext = "";
+      if (intent === "chat" && state?.memory) {
+        const { facts, recentMessages } = state.memory;
+
+        const factLines = [
+          facts.name ? `- Naam: ${facts.name}` : null,
+          facts.language ? `- Voorkeurstaal: ${facts.language}` : null,
+          facts.preferences?.length ? `- Voorkeuren: ${facts.preferences.join(", ")}` : null,
+          facts.topics?.length ? `- Eerdere onderwerpen: ${facts.topics.join(", ")}` : null,
+        ].filter(Boolean);
+
+        if (factLines.length > 0) {
+          memoryContext += `\n\nBekende feiten over deze gebruiker:\n${factLines.join("\n")}`;
+        }
+
+        if (recentMessages.length > 0) {
+          const historyText = recentMessages
+            .map((m) => `${m.role === "user" ? "Gebruiker" : "Assistent"}: ${m.content}`)
+            .join("\n");
+          memoryContext += `\n\nEerdere gesprekgeschiedenis:\n${historyText}`;
+        }
+      }
+
+      return `Je bent een WhatsApp messenger. ${contextMessage}${memoryContext}
 
 Stuur een kort, vriendelijk bevestigingsbericht via WhatsApp naar: ${conversationId}
 

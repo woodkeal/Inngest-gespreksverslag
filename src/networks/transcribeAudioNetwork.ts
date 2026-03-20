@@ -23,6 +23,8 @@ export function createTranscriptionState(overrides: Partial<ConversationStateDat
     messageSent: false,
     awaitingFollowUp: false,
     followUpQuestion: null,
+    memory: null,
+    lastReply: null,
     failedStep: null,
     failureReason: null,
     retryCount: {},

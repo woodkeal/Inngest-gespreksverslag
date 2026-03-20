@@ -1,5 +1,6 @@
 import { inngest } from "../client.js";
 import { chatNetwork, createChatState } from "../networks/chatNetwork.js";
+import { loadMemory, saveMemory } from "../lib/memory.js";
 import { logger } from "../lib/logger.js";
 import type { ConversationStateData } from "../types/state.js";
 
@@ -16,6 +17,7 @@ export const chatPipeline = inngest.createFunction(
   },
   async ({
     event,
+    step,
   }: {
     event: {
       data: {
@@ -27,9 +29,13 @@ export const chatPipeline = inngest.createFunction(
         replyCallbackUrl?: string | null;
       };
     };
+    step: any;
   }) => {
     const { conversationId, channel, messageBody, userEmail, replyCallbackUrl, intent } =
       event.data;
+
+    // Load persistent memory for this user (memoized by Inngest on replay)
+    const memory = await step.run("load-memory", () => loadMemory(conversationId));
 
     const state = createChatState({
       conversationId,
@@ -37,9 +43,16 @@ export const chatPipeline = inngest.createFunction(
       intent: (intent ?? "chat") as ConversationStateData["intent"],
       userEmail: userEmail ?? null,
       replyCallbackUrl: replyCallbackUrl ?? null,
+      memory: memory ?? null,
     });
 
     const result = await chatNetwork.run(messageBody, { state });
+
+    // Save this exchange to persistent memory (memoized by Inngest on replay)
+    const lastReply = result.state.data.lastReply ?? "";
+    await step.run("save-memory", () =>
+      saveMemory(conversationId, messageBody, lastReply, memory ?? null),
+    );
 
     logger.info("Chat pipeline voltooid", {
       conversationId,
