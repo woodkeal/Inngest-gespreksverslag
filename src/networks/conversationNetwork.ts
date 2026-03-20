@@ -7,6 +7,7 @@ import {
   emailAgent,
   messengerAgent,
   errorHandlerAgent,
+  testAgent,
 } from "../agents/index.js";
 import type { ConversationStateData } from "../types/state.js";
 
@@ -33,6 +34,7 @@ export function createInitialState(overrides: Partial<ConversationStateData> = {
     errorHandled: false,
     errorUserMessage: null,
     errorMessageSent: false,
+    testResult: null,
     ...overrides,
   });
 }
@@ -48,6 +50,7 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
     emailAgent,
     messengerAgent,
     errorHandlerAgent,
+    testAgent,
   ],
   maxIter: 30,
   defaultRouter: ({ network }) => {
@@ -107,7 +110,11 @@ export const conversationNetwork = createNetwork<ConversationStateData>({
       if (state.emailSent && !state.messageSent)        return messengerAgent;
     }
 
-    // Stap 3: Chat pipeline (geen audio)
+    // Stap 3: Testing pipeline (step.invoke demo)
+    if (state.intent === "testing" && !state.testResult) return testAgent;
+    if (state.intent === "testing" && state.testResult && !state.messageSent) return messengerAgent;
+
+    // Stap 4: Chat pipeline (geen audio)
     if (state.intent === "chat" && !state.messageSent) return messengerAgent;
 
     // Stap 4: Onbekende intent

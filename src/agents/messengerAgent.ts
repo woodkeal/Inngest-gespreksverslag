@@ -41,6 +41,8 @@ Gebruik send_rest_response met URL: ${replyCallbackUrl}`;
       contextMessage = `Het gespreksverslag is succesvol gegenereerd en per e-mail verstuurd naar ${state?.userEmail}.`;
     } else if (intent === "chat") {
       contextMessage = "Beantwoord de vraag van de gebruiker vriendelijk en behulpzaam.";
+    } else if (intent === "testing") {
+      contextMessage = `Stuur dit testresultaat terug naar de gebruiker: "${state?.testResult}"`;
     } else {
       contextMessage = "Bevestig de verwerking van het verzoek van de gebruiker.";
     }

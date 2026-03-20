@@ -21,7 +21,7 @@ export interface ReportStructure {
   };
 }
 
-export type Intent = "transcribe_audio" | "chat" | "unknown" | null;
+export type Intent = "transcribe_audio" | "chat" | "testing" | "unknown" | null;
 export type Channel = "whatsapp" | "rest";
 
 export interface ConversationStateData {
@@ -46,4 +46,5 @@ export interface ConversationStateData {
   errorHandled: boolean;
   errorUserMessage: string | null;
   errorMessageSent: boolean;
+  testResult: string | null;
 }
