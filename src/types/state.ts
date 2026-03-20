@@ -46,5 +46,4 @@ export interface ConversationStateData {
   errorHandled: boolean;
   errorUserMessage: string | null;
   errorMessageSent: boolean;
-  testResult: string | null;
 }

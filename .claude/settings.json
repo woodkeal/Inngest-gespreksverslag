@@ -1,6 +1,18 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__inngest-dev__grep_docs",
+      "mcp__inngest-dev__list_docs",
+      "mcp__inngest-dev__read_doc",
+      "Bash(grep -r \"agent.name\\\\|stepId\\\\|step\\\\.invoke\" 'c:\\\\Users\\\\Timber\\\\Documents\\\\Automation\\\\Inngest gespreksverslag\\\\src' --include=*.ts)",
+      "mcp__inngest-dev__send_event",
+      "mcp__inngest-dev__poll_run_status"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "inngest-dev"
+  ],
   "enabledPlugins": {
     "inngest-skills@inngest-agent-skills": true
-  },
-  "enabledMcpjsonServers": ["inngest-dev"]
+  }
 }

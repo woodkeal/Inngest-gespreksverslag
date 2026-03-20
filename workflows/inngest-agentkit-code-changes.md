@@ -76,6 +76,62 @@ Stel jezelf deze vragen voor je code schrijft:
 3. **Is de state-mutatie veilig bij replay?** → Zet state-updates ná de step call, of lees ze uit de state die agent-kit beheert
 4. **Is er een officieel voorbeeld dat dit doet?** → Kopieer de structuur, pas aan voor onze use case
 
+## Architectuurregels (vastgesteld in refactor 2026-03)
+
+### Deterministische classificatie — gebruik geen agent
+Als een classificatiebeslissing kan worden uitgedrukt als `if/else` regels zonder LLM-redenering, gebruik dan een gewone TypeScript functie. Een `classifierAgent` met `tool_choice: "forced"` kost een volledig LLM-aanroep voor nul redeneerwaarde.
+
+```typescript
+// ✅ Correct
+export function classifyIntent(body: string, mediaUrl: string | null): Intent {
+  if (mediaUrl !== null) return "transcribe_audio";
+  if (body.toLowerCase().includes("test")) return "testing";
+  if (body.trim().length >= 3) return "chat";
+  return "unknown";
+}
+```
+
+### Sub-pipeline patroon (step.invoke)
+Gebruik `step.invoke` wanneer een sub-pipeline zijn eigen concurrency- of retry-configuratie nodig heeft. `step.invoke` telt NIET mee voor de concurrencylimiet van de aanroeper.
+
+```typescript
+// Dispatcher: classify then delegate
+const intent = classifyIntent(body, mediaUrl);
+
+if (intent === "transcribe_audio") {
+  return await step.invoke("invoke-transcribe-audio-pipeline", {
+    function: transcribeAudioPipeline,
+    data: { conversationId, channel, mediaUrl },
+  });
+}
+```
+
+De sub-pipeline (`transcribeAudioPipeline`) heeft zijn eigen:
+- `concurrency: { key: "event.data.conversationId", limit: 1 }` — één actieve run per gebruiker
+- `cancelOn` — reageert op annuleer-events
+- `retries: 0` — pipeline beheert zijn eigen retry via `errorHandlerAgent`
+
+Gebruik `step.run` in plaats van `step.invoke` als de operatie geen eigen concurrency-/retryconfiguratie nodig heeft.
+
+### Inngest fouttypen
+```typescript
+import { NonRetriableError, RetryAfterError } from "inngest";
+
+// Permanente fout — geen retry (bijv. 404, auth fout, ongeldig formaat)
+throw new NonRetriableError("Kan audio niet downloaden: 403 Forbidden");
+
+// Tijdelijke fout — retry na specifieke tijd (bijv. rate limit)
+throw new RetryAfterError("Rate limit bereikt", "30m");
+```
+
+`onFailure` handler — veiligheidsnet als de gehele functierun als Failed wordt gemarkeerd:
+```typescript
+inngest.createFunction(
+  { id: "...", onFailure: async ({ event }) => { /* stuur foutmelding */ } },
+  async ({ event, step }) => { ... },
+)
+```
+
 ## Bekende patronen (uit ervaring)
 
 ### HITL: Wacht op gebruikersinput (WhatsApp)

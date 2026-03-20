@@ -2,49 +2,72 @@
 
 ## Doel
 
-Ontvang een audiobestand via WhatsApp of REST API en transcribeer het naar tekst via OpenAI Whisper.
+Ontvang een audiobestand via WhatsApp of REST API, transcribeer het naar tekst via OpenAI Whisper, genereer een gestructureerd rapport en stuur het per e-mail.
 
 ## Vereiste inputs
 
 - `mediaUrl`: De URL van het audiobestand (van Twilio of REST caller)
 - `conversationId`: Voor terugkoppeling aan de gebruiker
 - `channel`: "whatsapp" of "rest"
+- `userEmail` (optioneel): E-mailadres voor rapportbezorging (kan ook via HITL worden gevraagd)
 
 ## Stappen
 
-1. **Classifier** detecteert `intent = "transcribe_audio"` (aanwezig mediaUrl of gebruiker vraagt om transcriptie)
-2. **TranscriptionAgent** roept de `transcribe_audio` tool aan met de `mediaUrl` uit state
-3. Tool downloadt het audiobestand als buffer
-4. Tool stuurt naar OpenAI Whisper (`whisper-1`, taal: `nl`)
-5. Transcriptie wordt opgeslagen in `state.data.transcript`
-6. Pipeline gaat verder naar rapport-generatie
+1. **Dispatcher** (`handleWhatsApp` / `handleRestMessage`) detecteert `intent = "transcribe_audio"` via `classifyIntent()` (aanwezig `mediaUrl`)
+2. **Dispatcher** stuurt directe ACK-bevestiging aan de gebruiker via `step.run("send-ack")`
+3. **Dispatcher** start `transcribeAudioPipeline` via `step.invoke`
+4. **`transcribeAudioPipeline`** roept `step.run("transcribe-audio", doTranscribeAudio)` aan:
+   - Downloadt het audiobestand (met Twilio Basic Auth indien nodig)
+   - Detecteert audioformaat via URL-extensie en Content-Type header
+   - Stuurt naar OpenAI Whisper (`whisper-1`, taal: `nl`)
+   - Resultaat wordt opgeslagen in `state.data.transcript`
+5. **`transcribeAudioNetwork`** runt de agent-pipeline:
+   - `reportAgent` → genereert gestructureerd rapport (samenvatting, actiepunten, sprekers)
+   - `htmlConverterAgent` → converteert rapport naar HTML e-mailtemplate
+   - `emailAgent` → verstuurt e-mail (vraagt via HITL om e-mailadres als het ontbreekt)
+   - `messengerAgent` → stuurt WhatsApp/REST bevestiging
 
-## Edge cases
+## Transcriptie provider
+
+**OpenAI Whisper** (`whisper-1`) via `src/lib/openai.ts`.
+- API key: `OPENAI_API_KEY`
+- Functie: `doTranscribeAudio(audioUrl, conversationId)` in `src/tools/transcribeAudio.ts`
+- Stap-ID roteert per retry-poging: `"transcribe-audio"`, `"transcribe-audio-retry-1"`, etc.
+
+## Foutafhandeling
+
+### Niet-herstelbare fouten (NonRetriableError)
+Bij HTTP-fouten bij het downloaden van audio (bijv. 403, 404) wordt `NonRetriableError` gegooid. Inngest stopt direct en roept de `onFailure` handler aan die de gebruiker informeert.
+
+### Herstelbare fouten (errorHandlerAgent)
+Bij transcriptiefouten (netwerk, rate limit) wordt `state.failedStep = "transcription"` gezet. De `transcribeAudioNetwork` runt `errorHandlerAgent` → `messengerAgent`. De `errorHandlerAgent` beslist of er een retry plaatsvindt.
 
 ### Geen mediaUrl
+Als de dispatcher `transcribe_audio` detecteert maar `mediaUrl` is null (kan niet voorkomen in de huidige flow — de classifier controleert `mediaUrl !== null`) → pipeline start niet.
 
-Als `mediaUrl` null is maar de intent wel `transcribe_audio`:
-- Messenger agent stuurt een verzoek om audio op te sturen
-- Pipeline stopt (geen transcript, geen rapport)
+### Whisper lege transcriptie
+Tool retourneert `"(geen spraak gedetecteerd)"` als string. De `reportAgent` verwerkt dit graceful.
 
-### Whisper geeft lege transcriptie
+## Ondersteunde audioformaten
 
-- Tool retourneert `"Transcriptie mislukt"` als string
-- `state.transcript` wordt toch gezet — rapport agent moet hier graceful mee omgaan
-- Rapport agent zal aangeven dat de transcriptie onleesbaar was
-
-### Ondersteunde audioformaten
-
-Whisper ondersteunt: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg
+Whisper ondersteunt: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac, opus
 Twilio verstuurt audio doorgaans als `audio/ogg; codecs=opus`
 
-### Rate limits
+## Concurrency en cancellatie
 
-- OpenAI Whisper: 50 requests/minuut (gratis tier)
-- Bij rate limit: Inngest automatische retry met exponential backoff
-- `step.run()` memoiseert het resultaat — Whisper wordt niet opnieuw aangeroepen bij retry
+- `transcribeAudioPipeline` heeft `concurrency: { key: "event.data.conversationId", limit: 1 }` — één actieve run per gebruiker
+- Cancelleer een lopende pipeline via: `POST /api/conversations/:conversationId/cancel`
+- Beëindigt de functierun via `cancelOn: [{ event: "conversation/cancel", match: "data.conversationId" }]`
+
+## HITL: E-mailadres ontbreekt
+
+Als `userEmail` null is, pauzeert de `emailAgent` via `askFollowUp` tool:
+1. Stuurt een WhatsApp-vraag: "Op welk e-mailadres wil je het verslag ontvangen?"
+2. Wacht tot 30 minuten op antwoord via `step.waitForEvent`
+3. Bij timeout: pipeline stopt, gebruiker wordt geïnformeerd
+4. Bij antwoord: pipeline hervat met het opgegeven e-mailadres
 
 ## Kwaliteitsnorm
 
 - Minimale transcriptie: 10 woorden (anders waarschuw in rapport)
-- Taal detectie: Whisper retourneert altijd de herkende taal — sla op in rapport metadata
+- Taaldetectie: Whisper transcribeert altijd in `nl` (geforceerd via `language: "nl"`)

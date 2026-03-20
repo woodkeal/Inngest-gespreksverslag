@@ -1,5 +1,8 @@
 import { inngest } from "../client.js";
-import { conversationNetwork, createInitialState } from "../networks/index.js";
+import { classifyIntent } from "../lib/classifier.js";
+import { transcribeAudioPipeline } from "./transcribeAudioPipeline.js";
+import { chatPipeline } from "./chatPipeline.js";
+import { handleTest } from "./handleTest.js";
 import { logger } from "../lib/logger.js";
 import type { RestReceivedEvent } from "../types/events.js";
 
@@ -9,21 +12,20 @@ export const handleRestMessage = inngest.createFunction(
   {
     id: "handle-rest-message",
     triggers: [{ event: "message/rest.received" }],
-    concurrency: {
-      key: "event.data.sessionId",
-      limit: 1,
-    },
-    cancelOn: [{ event: "conversation/cancel", if: "event.data.sessionId == async.data.conversationId" }],
     retries: 2,
   },
   async ({ event, step }: { event: { data: RestReceivedEvent }; step: any }) => {
+    const conversationId = event.data.sessionId;
+    const mediaUrl = event.data.mediaUrl ?? null;
+    const messageBody = event.data.content;
+
     logger.info("REST bericht ontvangen", {
-      conversationId: event.data.sessionId,
-      hasMedia: !!event.data.mediaUrl,
+      conversationId,
+      hasMedia: !!mediaUrl,
     });
 
-    // Stuur direct een bevestiging voor lange flows (audio aanwezig)
-    if (event.data.mediaUrl && event.data.replyCallbackUrl) {
+    // Acknowledge long-running audio flow immediately
+    if (mediaUrl && event.data.replyCallbackUrl) {
       await step.run("send-ack", async () => {
         await fetch(event.data.replyCallbackUrl!, {
           method: "POST",
@@ -33,29 +35,52 @@ export const handleRestMessage = inngest.createFunction(
       });
     }
 
-    const state = createInitialState({
-      conversationId: event.data.sessionId,
-      channel: "rest",
-      mediaUrl: event.data.mediaUrl ?? null,
-      userEmail: event.data.userEmail ?? null,
-      replyCallbackUrl: event.data.replyCallbackUrl ?? null,
+    const intent = classifyIntent(messageBody, mediaUrl);
+    logger.info("Intent geclassificeerd", { conversationId, intent });
+
+    if (intent === "transcribe_audio") {
+      return await step.invoke("invoke-transcribe-audio-pipeline", {
+        function: transcribeAudioPipeline,
+        data: {
+          conversationId,
+          channel: "rest",
+          mediaUrl: mediaUrl!,
+          userEmail: event.data.userEmail ?? null,
+          replyCallbackUrl: event.data.replyCallbackUrl ?? null,
+        },
+      });
+    }
+
+    if (intent === "testing") {
+      await step.invoke("invoke-handle-test", {
+        function: handleTest,
+        data: { input: messageBody },
+      });
+
+      if (event.data.replyCallbackUrl) {
+        await step.run("send-test-reply", async () => {
+          await fetch(event.data.replyCallbackUrl!, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Test ontvangen ✅ Alles werkt." }),
+          });
+        });
+      }
+
+      return;
+    }
+
+    // chat + unknown both go to chatPipeline
+    return await step.invoke("invoke-chat-pipeline", {
+      function: chatPipeline,
+      data: {
+        conversationId,
+        channel: "rest",
+        messageBody,
+        intent,
+        userEmail: event.data.userEmail ?? null,
+        replyCallbackUrl: event.data.replyCallbackUrl ?? null,
+      },
     });
-
-    const result = await conversationNetwork.run(event.data.content, { state });
-
-    logger.info("REST pipeline voltooid", {
-      conversationId: event.data.sessionId,
-      intent: result.state.data.intent,
-      emailSent: result.state.data.emailSent,
-      emailTo: result.state.data.userEmail,
-      messageSent: result.state.data.messageSent,
-      transcript: result.state.data.transcript ? `${result.state.data.transcript.slice(0, 80)}…` : null,
-    });
-
-    return {
-      intent: result.state.data.intent,
-      emailSent: result.state.data.emailSent,
-      messageSent: result.state.data.messageSent,
-    };
   },
 );
