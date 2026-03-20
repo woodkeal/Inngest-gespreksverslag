@@ -37,8 +37,10 @@ Gebruik send_rest_response met URL: ${replyCallbackUrl}`;
 
     // Normale (succesvolle) path
     let contextMessage = "";
-    if (intent === "transcribe_audio" && emailSent) {
-      contextMessage = `Het gespreksverslag is succesvol gegenereerd en per e-mail verstuurd naar ${state?.userEmail}.`;
+    if (intent === "transcribe_audio" && emailSent && state?.userEmail) {
+      contextMessage = `Het gespreksverslag is succesvol gegenereerd en per e-mail verstuurd naar ${state.userEmail}.`;
+    } else if (intent === "transcribe_audio" && emailSent) {
+      contextMessage = "Het gespreksverslag is succesvol gegenereerd.";
     } else if (intent === "chat") {
       contextMessage = "Beantwoord de vraag van de gebruiker vriendelijk en behulpzaam.";
     } else {
